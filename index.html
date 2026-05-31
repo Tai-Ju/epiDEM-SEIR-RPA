@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEIR + RPA 傳染病擴散模擬</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      border-bottom: 1px solid #30363d;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .badge {
+      background: #238636;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #f0f6fc;
+    }
+
+    header p {
+      font-size: 13px;
+      color: #8b949e;
+      margin-top: 2px;
+    }
+
+    .meta-bar {
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      padding: 10px 32px;
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #8b949e;
+    }
+
+    .meta-item strong { color: #e6edf3; }
+
+    .tag {
+      background: #1f6feb22;
+      border: 1px solid #1f6feb55;
+      color: #58a6ff;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    .main {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 24px 32px;
+    }
+
+    .sim-frame {
+      width: 100%;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #30363d;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      background: #fff;
+    }
+
+    .sim-frame iframe {
+      width: 100%;
+      height: 800px;
+      border: none;
+      display: block;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 20px 0 8px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      background: #161b22;
+      border: 1px solid #30363d;
+      padding: 6px 14px;
+      border-radius: 20px;
+    }
+
+    .dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 28px;
+    }
+
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #58a6ff;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .card ul li {
+      font-size: 13px;
+      color: #8b949e;
+      padding-left: 14px;
+      position: relative;
+      line-height: 1.6;
+    }
+
+    .card ul li::before {
+      content: "→";
+      position: absolute;
+      left: 0;
+      color: #30363d;
+    }
+
+    .card ul li strong { color: #e6edf3; }
+
+    .seir-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin: 16px 0 8px;
+      flex-wrap: wrap;
+    }
+
+    .seir-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .seir-circle {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .seir-label {
+      font-size: 10px;
+      color: #8b949e;
+      letter-spacing: 0.5px;
+    }
+
+    .seir-arrow {
+      font-size: 18px;
+      color: #444d56;
+      margin: 0 6px;
+      padding-bottom: 18px;
+    }
+
+    .rpa-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .rpa-chip {
+      background: #1f2937;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      color: #c9d1d9;
+    }
+
+    footer {
+      border-top: 1px solid #30363d;
+      padding: 20px 32px;
+      margin-top: 40px;
+      font-size: 12px;
+      color: #484f58;
+      text-align: center;
+    }
+
+    footer a { color: #58a6ff; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+      <h1>🦠 SEIR + RPA 傳染病擴散模擬</h1>
+      <span class="badge">NetLogo Web</span>
+      <span class="badge" style="background:#1f6feb;">Agent-Based Model</span>
+    </div>
+    <p>基於 epiDEM Travel and Control 模型，整合 SEIR 狀態機與 RPA 自動化防疫流程</p>
+  </div>
+</header>
+
+<div class="meta-bar">
+  <div class="meta-item">📍 <strong>模型</strong> epiDEM Travel &amp; Control (Yang &amp; Wilensky, 2011)</div>
+  <div class="meta-item">🔬 <strong>架構</strong> SEIR Agent-Based Modeling</div>
+  <div class="meta-item">⚙️ <strong>擴充</strong> RPA 自動化防疫觸發</div>
+  <div class="meta-item">
+    <span class="tag">S → E → I → R</span>
+    <span class="tag">跨大陸傳播</span>
+    <span class="tag">自動隔離</span>
+    <span class="tag">疫苗加強</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- 顏色圖例 -->
+  <div class="legend">
+    <div class="legend-item"><div class="dot" style="background:#fff;border:1px solid #555;"></div> S 易感者（白）</div>
+    <div class="legend-item"><div class="dot" style="background:#ff9800;"></div> E 潛伏期（橘）</div>
+    <div class="legend-item"><div class="dot" style="background:#e53935;"></div> I 感染者（紅）</div>
+    <div class="legend-item"><div class="dot" style="background:#43a047;"></div> R 康復者（綠）</div>
+    <div class="legend-item"><div class="dot" style="background:#1e88e5;"></div> 已接種（藍）</div>
+    <div class="legend-item"><div class="dot" style="background:#fdd835;"></div> RPA Bot（黃）</div>
+  </div>
+
+  <!-- 模擬主框架 -->
+  <div class="sim-frame">
+    <iframe
+      src="https://netlogoweb.org/web?https://raw.githubusercontent.com/Tai-Ju/epiDEM-SEIR-RPA/main/models/epiDEM_SEIR_RPA.nlogox"
+      allowfullscreen
+      title="SEIR RPA Epidemic Simulation">
+    </iframe>
+  </div>
+
+  <!-- 說明卡片 -->
+  <div class="info-grid">
+
+    <div class="card">
+      <h3>🔄 SEIR 狀態流程</h3>
+      <div class="seir-flow">
+        <div class="seir-box">
+          <div class="seir-circle" style="background:#555;">S</div>
+          <div class="seir-label">易感</div>
+        </div>
+        <div class="seir-arrow">→</div>
+        <div class="seir-box">
+          <div class="seir-circle" style="background:#ff9800;">E</div>
+          <div class="seir-label">潛伏</div>
+        </div>
+        <div class="seir-arrow">→</div>
+        <div class="seir-box">
+          <div class="seir-circle" style="background:#e53935;">I</div>
+          <div class="seir-label">感染</div>
+        </div>
+        <div class="seir-arrow">→</div>
+        <div class="seir-box">
+          <div class="seir-circle" style="background:#43a047;">R</div>
+          <div class="seir-label">康復</div>
+        </div>
+      </div>
+      <ul style="margin-top:12px;">
+        <li>接觸感染者 → 進入 <strong>E（潛伏）</strong>狀態</li>
+        <li>潛伏期結束（average-recovery-time）→ 轉為 <strong>I</strong></li>
+        <li>感染期超過 recovery-time → 以 recovery-chance 機率康復</li>
+        <li>住院者恢復速度為一般的 5 倍</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>🤖 RPA 自動化防疫模組</h3>
+      <div class="rpa-row">
+        <div class="rpa-chip">📊 資料蒐集 Bot</div>
+        <div class="rpa-chip">🔒 自動隔離觸發</div>
+        <div class="rpa-chip">🚑 救護車調度</div>
+        <div class="rpa-chip">🛂 邊境封鎖</div>
+        <div class="rpa-chip">💉 疫苗加強</div>
+      </div>
+      <ul style="margin-top:12px;">
+        <li><strong>rpa-data-collection</strong>：Bot 定期掃描周圍感染人數</li>
+        <li><strong>rpa-auto-quarantine</strong>：感染率超閾值自動強制隔離</li>
+        <li><strong>rpa-dispatch-ambulance</strong>：住院人數超標自動增派 Bot</li>
+        <li><strong>rpa-border-lockdown</strong>：雙大陸同時爆發時封閉邊境</li>
+        <li><strong>rpa-auto-vaccine</strong>：感染持續上升時自動提升接種率</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>📐 Y = f(X) 分析框架</h3>
+      <ul>
+        <li><strong>Y（輸出指標）</strong>：R₀、累積感染率、族群動態、感染/康復速率</li>
+        <li><strong>結構參數</strong>：infection-chance、recovery-chance、average-recovery-time</li>
+        <li><strong>行為參數</strong>：isolation-tendency、hospital-going-tendency、travel-tendency</li>
+        <li><strong>RPA 閾值</strong>：quarantine-threshold、dispatch-threshold、vaccine-rise-ticks</li>
+        <li>R₀ 目標範圍：2.0 – 3.0（He et al., 2020）</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>📚 參考文獻</h3>
+      <ul>
+        <li><strong>Kermack &amp; McKendrick (1927)</strong>：SIR 模型原典</li>
+        <li><strong>Hethcote (2000)</strong>：SEIR 理論基礎</li>
+        <li><strong>He, Peng &amp; Sun (2020)</strong>：COVID SEIR 參數校正（Nonlinear Dynamics）</li>
+        <li><strong>Lauer et al. (2020)</strong>：潛伏期 5.1 天（Annals of Internal Medicine）</li>
+        <li><strong>Fan et al. (2024)</strong>：NetLogo 多智能體 COVID 模擬（BMC Public Health）</li>
+        <li><strong>Yang &amp; Wilensky (2011)</strong>：epiDEM 原始模型</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <p>SEIR + RPA Epidemic Simulation｜NetLogo 7.0 · Agent-Based Modeling</p>
+  <p style="margin-top:6px;">
+    <a href="https://github.com/Tai-Ju/epiDEM-SEIR-RPA">GitHub Repo</a> ·
+    <a href="https://netlogoweb.org">NetLogo Web</a> ·
+    Base model: Yang &amp; Wilensky (2011), Northwestern University
+  </p>
+</footer>
+
+</body>
+</html>
